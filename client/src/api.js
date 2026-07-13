@@ -25,7 +25,7 @@ async function request(url, options = {}) {
     return null;
   }
 
-  return response.json();
+  return response.json(); v
 }
 
 // playlists
