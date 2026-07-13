@@ -53,7 +53,7 @@ export default function PlaylistList() {
   return (
     <>
       <div className="page-head">
-        <h1>Dhimy's Playlists</h1>
+        <h1>Dhimy’s Playlists</h1>
         <button className="pill" onClick={() => setShowForm(true)}>
           New Playlist
         </button>
