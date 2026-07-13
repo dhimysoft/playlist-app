@@ -1,0 +1,11 @@
+$kind: http-request
+name: Get Song By ID
+description: ""
+url: http://localhost:3000/api/playlists/2/songs/9
+method: GET
+settings:
+  strictSSL: false
+  followRedirects: true
+  disableCookies: false
+  maxResponseSize: 52428800
+order: 1937107756356388
