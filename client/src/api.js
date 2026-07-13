@@ -1,7 +1,13 @@
-// all the api calls in one place
-const BASE_URL = "/api";
 
-// wrapper around fetch, throws the server's error message if the request fails
+// All API calls in one place
+
+const API_HOST =
+  import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+const BASE_URL = `${API_HOST}/api`;
+
+// Wrapper around fetch.
+// Throws the server's error message if the request fails.
 async function request(url, options = {}) {
   const response = await fetch(url, options);
 
@@ -15,7 +21,7 @@ async function request(url, options = {}) {
         message = body.error;
       }
     } catch {
-      // no json body
+      // The response did not contain JSON.
     }
 
     throw new Error(message);
@@ -25,10 +31,10 @@ async function request(url, options = {}) {
     return null;
   }
 
-  return response.json(); v
+  return response.json();
 }
 
-// playlists
+// Playlists
 
 export function getPlaylists() {
   return request(`${BASE_URL}/playlists`);
@@ -64,7 +70,7 @@ export function deletePlaylist(id) {
   });
 }
 
-// songs
+// Songs
 
 export function addSong(playlistId, data) {
   return request(`${BASE_URL}/playlists/${playlistId}/songs`, {
@@ -76,17 +82,13 @@ export function addSong(playlistId, data) {
   });
 }
 
-// needs both the playlist id and the song id
 export function deleteSong(playlistId, songId) {
-  return request(
-    `${BASE_URL}/playlists/${playlistId}/songs/${songId}`,
-    {
-      method: "DELETE",
-    }
-  );
+  return request(`${BASE_URL}/playlists/${playlistId}/songs/${songId}`, {
+    method: "DELETE",
+  });
 }
 
-// preview
+// Preview
 
 export function getPreview(artist, title) {
   const query = new URLSearchParams({
@@ -97,7 +99,8 @@ export function getPreview(artist, title) {
   return request(`${BASE_URL}/preview?${query.toString()}`);
 }
 
-// 225 -> "3:45"
+// 225 becomes "3:45"
+
 export function formatDuration(seconds) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
