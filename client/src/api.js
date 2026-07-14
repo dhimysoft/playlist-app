@@ -1,8 +1,6 @@
-
 // All API calls in one place
 
-const API_HOST =
-  import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_HOST = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const BASE_URL = `${API_HOST}/api`;
 
@@ -82,8 +80,8 @@ export function addSong(playlistId, data) {
   });
 }
 
-export function deleteSong(playlistId, songId) {
-  return request(`${BASE_URL}/playlists/${playlistId}/songs/${songId}`, {
+export function deleteSong(songId) {
+  return request(`${BASE_URL}/songs/${songId}`, {
     method: "DELETE",
   });
 }

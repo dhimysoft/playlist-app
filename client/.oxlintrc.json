@@ -1,5 +1,11 @@
 {
+
+
+  // Configuration file for Oxlint, a blazingly fast JavaScript and TypeScript linter.
+  // It tells the tool exactly how to check your code for bugs and enforce best practices in your project.
   // This tells VS Code what settings are valid inside this file.
+
+  // This is just a way of formating the code
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "oxc"],
   "rules": {
