@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { PlayerProvider } from "../PlayerContext";
+import FullSongsToggle from "./FullSongsToggle";
 import NowPlayingBar from "./NowPlayingBar";
 
 // top bar + container that wraps every page, plus the now playing bar
@@ -19,6 +20,7 @@ export default function Layout() {
               </NavLink>
               <NavLink to="/library">Library</NavLink>
             </nav>
+            <FullSongsToggle />
           </header>
           <main className="content">
             <Outlet />

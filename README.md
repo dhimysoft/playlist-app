@@ -15,6 +15,7 @@ Built with **PostgreSQL · Express · React (Vite) · Node · Sequelize**.
 - Search and sort inside a playlist
 - 30-second previews with a now-playing bar: play/pause, next/previous, seek, and
   auto-advance to the next song
+- **Full songs** (top-bar switch): plays the whole track through YouTube's embedded player
 
 ## 📚 Documentation in this project
 
@@ -93,6 +94,7 @@ set `VITE_API_URL` to point it at a deployed API. Allowed browser origins are li
 | PATCH | `/api/songs/:id` | update a song by its own id |
 | DELETE | `/api/songs/:id` | delete a song by its own id |
 | GET | `/api/preview?artist=&title=` | 30-second preview MP3 for a song (via iTunes) |
+| GET | `/api/songs/:id/video` | YouTube video id for a song (searched once, then saved) |
 
 Status codes: `200` read/updated · `201` created · `204` deleted · `400` bad input ·
 `404` not found · `500` server error.
@@ -178,3 +180,30 @@ the server only ever receives plain JSON.
 **New Playlist**) does the same thing but creates the playlist for you. The name is taken from
 the file (`Midnight_Vibes_Playlist.xlsx` becomes "Midnight Vibes") and can be changed before
 you create it. If adding the songs fails, the empty playlist is removed again.
+
+---
+
+## Full songs (YouTube)
+
+Flip the **Full songs** switch in the top bar and songs play in full through YouTube's embedded
+player (a small video panel appears above the player bar). Music licensing makes this the only
+free way to stream whole tracks. If a song has no video, or the video can't be embedded, the
+app tells you why and plays the 30-second preview instead.
+
+There are two ways a song gets its video:
+
+1. **Paste a link (no setup).** Click **Edit** on a song and paste any YouTube link
+   (`youtube.com/watch?v=…`, `youtu.be/…`, `music.youtube.com/…`) into *YouTube link*.
+2. **Automatic search (needs a free API key).** The server searches YouTube for
+   `artist + title` the first time you play a song in full mode, then saves the video on the song
+   so it is never searched twice.
+
+   1. Go to the [Google Cloud console](https://console.cloud.google.com/), create a project, and
+      enable **YouTube Data API v3**.
+   2. Create an **API key** (Credentials → Create credentials → API key). Restrict it to the
+      YouTube Data API.
+   3. Put it in `server/.env` as `YOUTUBE_API_KEY=…` (on Render: Environment → add the variable).
+
+   The free quota is 10,000 units a day and one search costs 100, so about 100 new songs a day.
+   Saved results don't count again. Editing a song's title or artist clears its saved video so it
+   is searched again; to keep a hand-picked link, change the link in the same save.

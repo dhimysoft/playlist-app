@@ -3,6 +3,7 @@ const router = express.Router();
 
 const { sequelize, Playlist, Song } = require("../models");
 const { enqueue } = require("../lib/artwork");
+const { extractVideoId } = require("../lib/youtube");
 
 // check the playlist has a name before creating
 function requirePlaylistName(req, res, next) {
@@ -383,11 +384,33 @@ router.patch("/:id/songs/:songId", async (req, res, next) => {
       updates.duration = seconds;
     }
 
-    // a different title/artist means a different cover
+    // YouTube link/id: "" clears it so the next play looks it up again
+    if (req.body.youtubeId !== undefined) {
+      const raw = String(req.body.youtubeId || "").trim();
+
+      if (raw === "") {
+        updates.youtubeId = null;
+      } else {
+        const videoId = extractVideoId(raw);
+
+        if (!videoId) {
+          return res.status(400).json({
+            error: "That doesn't look like a YouTube link",
+          });
+        }
+
+        updates.youtubeId = videoId;
+      }
+    }
+
+    // a different title/artist means a different cover (and a different video)
     const changed =
       (updates.title && updates.title !== song.title) ||
       (updates.artist && updates.artist !== song.artist);
-    if (changed) updates.artworkUrl = null;
+    if (changed) {
+      updates.artworkUrl = null;
+      if (req.body.youtubeId === undefined) updates.youtubeId = null;
+    }
 
     await song.update(updates);
     if (changed) enqueue(song.id, { first: true });

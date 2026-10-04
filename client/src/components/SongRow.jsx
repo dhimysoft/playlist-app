@@ -12,7 +12,7 @@ export default function SongRow({ song, queue, playlist, onSave, onDelete }) {
   const { playSong, current, isPlaying, loadingId } = usePlayer();
 
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({ title: "", artist: "", duration: "" });
+  const [draft, setDraft] = useState({ title: "", artist: "", duration: "", youtube: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -24,6 +24,7 @@ export default function SongRow({ song, queue, playlist, onSave, onDelete }) {
       title: song.title,
       artist: song.artist,
       duration: formatDuration(song.duration),
+      youtube: song.youtubeId ? `https://youtu.be/${song.youtubeId}` : "",
     });
     setError(null);
     setEditing(true);
@@ -42,6 +43,10 @@ export default function SongRow({ song, queue, playlist, onSave, onDelete }) {
     if (draft.title.trim() !== song.title) changes.title = draft.title.trim();
     if (draft.artist.trim() !== song.artist) changes.artist = draft.artist.trim();
     if (seconds !== song.duration) changes.duration = seconds;
+
+    // the server checks the link and clears it when this is empty
+    const oldLink = song.youtubeId ? `https://youtu.be/${song.youtubeId}` : "";
+    if (draft.youtube.trim() !== oldLink) changes.youtubeId = draft.youtube.trim();
 
     if (Object.keys(changes).length === 0) {
       setEditing(false);
@@ -115,6 +120,13 @@ export default function SongRow({ song, queue, playlist, onSave, onDelete }) {
           onChange={(e) => setDraft({ ...draft, duration: e.target.value })}
           placeholder="m:ss"
           aria-label="Duration"
+        />
+        <input
+          className="song-link-input"
+          value={draft.youtube}
+          onChange={(e) => setDraft({ ...draft, youtube: e.target.value })}
+          placeholder="YouTube link for full-song playback (optional)"
+          aria-label="YouTube link"
         />
         <div className="song-actions">
           <button type="submit" className="pill sm" disabled={saving}>

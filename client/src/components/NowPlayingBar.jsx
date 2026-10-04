@@ -12,6 +12,7 @@ export default function NowPlayingBar() {
     seek,
     stop,
     error,
+    notice,
     progress,
     hasNext,
     hasPrevious,
@@ -32,7 +33,12 @@ export default function NowPlayingBar() {
             )}
             <div className="np-meta">
               <span className="np-title">{current.title}</span>
-              <span className="np-artist">{current.artist}</span>
+              <span className="np-artist">
+                {current.artist}
+                <span className={`np-tag${current.source === "youtube" ? " full" : ""}`}>
+                  {current.source === "youtube" ? "Full song" : "Preview"}
+                </span>
+              </span>
             </div>
             <button
               className="np-skip"
@@ -75,6 +81,7 @@ export default function NowPlayingBar() {
               {formatDuration(Math.floor(progress.duration || 0))}
             </span>
           </div>
+          {notice && <p className="np-notice">{notice}</p>}
         </>
       ) : (
         <span className="np-error">{error}</span>

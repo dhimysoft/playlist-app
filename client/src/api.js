@@ -11,6 +11,7 @@ async function request(url, options = {}) {
 
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
+    let code;
 
     try {
       const body = await response.json();
@@ -18,11 +19,15 @@ async function request(url, options = {}) {
       if (body.error) {
         message = body.error;
       }
+
+      code = body.code;
     } catch {
       // The response did not contain JSON.
     }
 
-    throw new Error(message);
+    const error = new Error(message);
+    error.code = code; // e.g. "not_configured", so callers can react to it
+    throw error;
   }
 
   if (response.status === 204) {
@@ -136,4 +141,9 @@ export function formatTotalDuration(seconds) {
 
   if (hours === 0) return `${totalMinutes} min`;
   return minutes === 0 ? `${hours} hr` : `${hours} hr ${minutes} min`;
+}
+
+// the YouTube video id for a song (the server looks it up the first time)
+export function getSongVideo(songId) {
+  return request(`${BASE_URL}/songs/${songId}/video`);
 }

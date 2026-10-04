@@ -1,6 +1,7 @@
 const express = require("express");
 const { Song } = require("../models");
 const { enqueue } = require("../lib/artwork");
+const { extractVideoId, findVideo } = require("../lib/youtube");
 
 const router = express.Router();
 
@@ -48,11 +49,33 @@ router.patch("/:id", async (req, res, next) => {
       updates.duration = seconds;
     }
 
-    // a different title/artist means a different cover
+    // YouTube link/id: "" clears it so the next play looks it up again
+    if (req.body.youtubeId !== undefined) {
+      const raw = String(req.body.youtubeId || "").trim();
+
+      if (raw === "") {
+        updates.youtubeId = null;
+      } else {
+        const videoId = extractVideoId(raw);
+
+        if (!videoId) {
+          return res.status(400).json({
+            error: "That doesn't look like a YouTube link",
+          });
+        }
+
+        updates.youtubeId = videoId;
+      }
+    }
+
+    // a different title/artist means a different cover (and a different video)
     const changed =
       (updates.title && updates.title !== song.title) ||
       (updates.artist && updates.artist !== song.artist);
-    if (changed) updates.artworkUrl = null;
+    if (changed) {
+      updates.artworkUrl = null;
+      if (req.body.youtubeId === undefined) updates.youtubeId = null;
+    }
 
     await song.update(updates);
     if (changed) enqueue(song.id, { first: true });
@@ -65,6 +88,43 @@ router.patch("/:id", async (req, res, next) => {
       });
     }
 
+    next(err);
+  }
+});
+
+// the YouTube video for a song, looked up the first time and then saved on the song
+router.get("/:id/video", async (req, res, next) => {
+  try {
+    const song = await Song.findByPk(req.params.id);
+
+    if (!song) {
+      return res.status(404).json({ error: "Song not found" });
+    }
+
+    if (song.youtubeId) {
+      return res.json({ youtubeId: song.youtubeId });
+    }
+
+    // "" means we already searched and found nothing, don't spend quota again
+    if (song.youtubeId === null) {
+      let videoId;
+
+      try {
+        videoId = await findVideo(song.artist, song.title);
+      } catch (err) {
+        const status = { not_configured: 503, quota: 429 }[err.code] || 502;
+        return res.status(status).json({ error: err.message, code: err.code || "failed" });
+      }
+
+      await song.update({ youtubeId: videoId });
+      if (videoId) return res.json({ youtubeId: videoId });
+    }
+
+    res.status(404).json({
+      error: "No YouTube video found for this song",
+      code: "no_match",
+    });
+  } catch (err) {
     next(err);
   }
 });

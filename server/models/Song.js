@@ -24,6 +24,12 @@ const Song = sequelize.define("Song", {
     allowNull: true,
     defaultValue: null,
   },
+  // YouTube video id for full-song playback. null = not looked up yet, "" = no match found
+  youtubeId: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    defaultValue: null,
+  },
 });
 
 module.exports = Song;

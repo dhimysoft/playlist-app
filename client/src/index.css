@@ -1122,3 +1122,169 @@ select {
     max-width: 48%;
   }
 }
+
+/* --- full songs: toggle, video panel, notices --- */
+.full-toggle {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  user-select: none;
+}
+
+.full-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.full-toggle-track {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.15s;
+  flex: none;
+}
+
+.full-toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.full-toggle input:checked + .full-toggle-track {
+  background: var(--green);
+}
+
+.full-toggle input:checked + .full-toggle-track::after {
+  transform: translateX(16px);
+}
+
+.full-toggle input:focus-visible + .full-toggle-track {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.full-toggle input:checked ~ .full-toggle-label {
+  color: var(--text);
+}
+
+.yt-panel {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: 150px;
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 40px));
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  z-index: 59;
+}
+
+.yt-panel.open {
+  display: block;
+}
+
+.yt-panel iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.np-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.np-tag.full {
+  color: var(--green);
+  border-color: var(--green-dark);
+}
+
+.np-notice {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.song-link-input {
+  grid-column: 2 / -1;
+}
+
+@media (max-width: 640px) {
+  .full-toggle-label {
+    display: none;
+  }
+
+  .song-link-input {
+    grid-column: 2;
+  }
+}
+
+/* phones: compact top bar so the Full songs switch fits, page header wraps */
+@media (max-width: 640px) {
+  .topbar {
+    padding: 14px 16px;
+    gap: 8px;
+  }
+
+  .topnav {
+    margin-left: 4px;
+    gap: 2px;
+  }
+
+  .topnav a {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+
+  .logo-text {
+    display: none;
+  }
+
+  .content {
+    padding: 22px 16px 32px;
+  }
+
+  .page-head {
+    flex-wrap: wrap;
+  }
+
+  .page-head h1 {
+    font-size: 1.6rem;
+  }
+
+  .page-head > .row {
+    width: 100%;
+  }
+
+  .page-head > .row .pill {
+    flex: 1;
+  }
+}
