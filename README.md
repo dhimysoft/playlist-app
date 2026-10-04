@@ -3,6 +3,8 @@
 Create playlists, add songs to them, and play a 30-second preview of each song.
 Built with **PostgreSQL · Express · React (Vite) · Node · Sequelize**.
 
+🔗 **Live demo:** https://playlist-app-zeta.vercel.app
+
 ---
 
 ## 📚 Documentation in this project (read this first)
