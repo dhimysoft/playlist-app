@@ -105,3 +105,14 @@ export function formatDuration(seconds) {
 
   return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
 }
+
+// add a whole list of songs in one request: [{ title, artist, duration }]
+export function addSongs(playlistId, songs) {
+  return request(`${BASE_URL}/playlists/${playlistId}/songs/bulk`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ songs }),
+  });
+}

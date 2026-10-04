@@ -86,6 +86,7 @@ Start the **API first**, then the client. The Vite dev server proxies `/api` →
 | GET | `/api/playlists/:id/songs` | songs in one playlist |
 | GET | `/api/playlists/:id/songs/:songId` | one song in one playlist |
 | POST | `/api/playlists/:id/songs` | add a song to a playlist |
+| POST | `/api/playlists/:id/songs/bulk` | add many songs at once (`{ songs: [...] }`, all or nothing, max 500) |
 | PATCH | `/api/playlists/:id/songs/:songId` | partially update a song |
 | DELETE | `/api/playlists/:id/songs/:songId` | delete a song |
 | PATCH | `/api/songs/:id` | update a song by its own id |
@@ -104,6 +105,7 @@ server/
   db.js            one Sequelize connection (port 5431)
   models/          Playlist.js, Song.js, index.js (the association)
   routes/          playlists.js, songs.js, preview.js
+  lib/artwork.js   looks up cover art (iTunes) in a slow background queue
   app.js           express app: cors, json, routes, error handler, sync
   seed.js          npm run seed — sample playlists & songs
 client/
@@ -112,7 +114,9 @@ client/
     main.jsx           router (/, /playlists/:id)
     api.js             all fetch logic + formatDuration()
     PlayerContext.jsx  the global music player
-    components/        Layout.jsx, NowPlayingBar.jsx
+    components/        Layout.jsx, NowPlayingBar.jsx, Cover.jsx, PlaylistCover.jsx,
+                       ImportSongsModal.jsx
+    importParser.js    turns spreadsheet rows / pasted text into songs
     pages/             PlaylistList.jsx, PlaylistDetail.jsx
     index.css          dark Spotify-ish theme
 ```
@@ -137,3 +141,38 @@ TheAudioDB only returns metadata, so playback uses Apple's free **iTunes Search 
 which returns a real 30-second preview MP3 by song name. The Express server looks it up
 (`server/routes/preview.js`) and the browser plays it in an `<audio>` element
 (`client/src/PlayerContext.jsx`). Previews are 30 seconds and need an internet connection.
+
+---
+
+## Cover art
+
+Every song row, playlist card and playlist header shows cover art. The URL is stored on
+the song (`Song.artworkUrl`): `null` = not looked up yet, `""` = iTunes had no match.
+When the server starts it looks up every missing cover in the background (one request
+every ~3 seconds, because iTunes limits searches to about 20 a minute), and new or
+renamed songs are queued right away. The pages re-check every few seconds while covers
+are still missing, so they appear without a reload. A song with no cover shows a colored
+placeholder with its first letter. The server uses `sequelize.sync({ alter: true })` so
+the new column is added to an existing database automatically.
+
+---
+
+## Importing a whole list
+
+On a playlist page, **Import a list** opens a popup where you can:
+
+- **upload or drop** an `.xlsx` or `.csv` file (columns `Title`, `Artist`, `Duration`; a `Track #`
+  column and the header row are detected automatically), or
+- **paste** text: tab-separated rows copied from a table or sheet, `Title, Artist, 3:45` lines,
+  or just `Song name - Artist`.
+
+A preview shows every row so you can fix titles, artists and durations before adding. Rows
+already in the playlist are unticked as duplicates, and rows with no duration can be filled in
+automatically from iTunes (**Fill missing durations**, about 3 seconds per song). Everything
+ticked is added in one request. Spreadsheets are read in the browser (`read-excel-file`), so
+the server only ever receives plain JSON.
+
+**Import as a new playlist:** on the home page, the **Import** button (or the link inside
+**New Playlist**) does the same thing but creates the playlist for you. The name is taken from
+the file (`Midnight_Vibes_Playlist.xlsx` becomes "Midnight Vibes") and can be changed before
+you create it. If adding the songs fails, the empty playlist is removed again.

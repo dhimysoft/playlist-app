@@ -3,12 +3,17 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   getPlaylist,
   addSong,
+  addSongs,
   deleteSong,
   updatePlaylist,
   deletePlaylist,
   formatDuration,
 } from "../api";
 import { usePlayer } from "../PlayerContext";
+import Cover from "../components/Cover";
+import ImportSongsModal from "../components/ImportSongsModal";
+import PlaylistCover from "../components/PlaylistCover";
+import { useArtworkRefresh } from "../useArtworkRefresh";
 
 // one playlist: its songs, add song form, edit/delete, play buttons
 export default function PlaylistDetail() {
@@ -25,6 +30,8 @@ export default function PlaylistDetail() {
   const [duration, setDuration] = useState("");
   const [formError, setFormError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [importing, setImporting] = useState(false);
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -45,6 +52,28 @@ export default function PlaylistDetail() {
     }
     load();
   }, [id]);
+
+  // covers get filled in by the server in the background, so keep checking
+  // while any song has no result yet. Only the covers are copied over so
+  // nothing else on the page (like deleted songs) gets overwritten.
+  const waitingForArt = !!playlist?.Songs.some((s) => s.artworkUrl === null);
+
+  useArtworkRefresh(waitingForArt, async () => {
+    try {
+      const fresh = await getPlaylist(id);
+      const covers = new Map(fresh.Songs.map((s) => [s.id, s.artworkUrl]));
+      setPlaylist((prev) =>
+        prev && {
+          ...prev,
+          Songs: prev.Songs.map((s) =>
+            covers.has(s.id) ? { ...s, artworkUrl: covers.get(s.id) } : s
+          ),
+        }
+      );
+    } catch {
+      // try again on the next tick
+    }
+  });
 
   // "3:45" or plain seconds -> seconds, or null if it's bad
   function parseDuration(input) {
@@ -81,7 +110,6 @@ export default function PlaylistDetail() {
     }
   }
 
-  // TODO: deleteSong needs (playlistId, songId), only passing one here so it doesn't work yet
   async function handleDeleteSong(songId) {
     try {
       await deleteSong(songId);
@@ -92,6 +120,12 @@ export default function PlaylistDetail() {
     } catch (err) {
       alert(err.message);
     }
+  }
+
+  // add a whole list at once (from the import popup)
+  async function handleImport(songs) {
+    const created = await addSongs(id, songs);
+    setPlaylist((prev) => ({ ...prev, Songs: [...prev.Songs, ...created] }));
   }
 
   function startEdit() {
@@ -169,23 +203,39 @@ export default function PlaylistDetail() {
           </div>
         </form>
       ) : (
-        <div className="detail-title">
-          <div className="detail-title-row">
-            <h1>{playlist.name}</h1>
-            <div className="detail-actions">
-              <button className="link-btn" onClick={startEdit}>
-                Edit
-              </button>
-              <button className="link-btn danger" onClick={handleDeletePlaylist}>
-                Delete
-              </button>
+        <div className="detail-header">
+          <PlaylistCover playlist={playlist} className="detail-cover" />
+          <div className="detail-title">
+            <span className="detail-kind">Playlist</span>
+            <div className="detail-title-row">
+              <h1>{playlist.name}</h1>
+              <div className="detail-actions">
+                <button className="link-btn" onClick={startEdit}>
+                  Edit
+                </button>
+                <button
+                  className="link-btn danger"
+                  onClick={handleDeletePlaylist}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
+            <p className="muted">{playlist.description || "No description"}</p>
+            <p className="muted detail-stats">
+              {playlist.Songs.length} song{playlist.Songs.length === 1 ? "" : "s"}
+              {playlist.Songs.length > 0 && ` · ${formatDuration(totalSeconds)}`}
+            </p>
           </div>
-          <p className="muted">{playlist.description || "No description"}</p>
         </div>
       )}
 
-      <h3 className="section-label">Add a Song</h3>
+      <div className="add-head">
+        <h3 className="section-label">Add a Song</h3>
+        <button className="pill ghost sm" onClick={() => setImporting(true)}>
+          Import a list
+        </button>
+      </div>
       <form onSubmit={handleAddSong} className="song-form">
         <input
           placeholder="Title"
@@ -225,14 +275,22 @@ export default function PlaylistDetail() {
           const isLoading = loadingId === song.id;
           return (
             <div key={song.id} className={`song-row${isCurrent ? " playing" : ""}`}>
-              <button
-                className="play-btn"
-                onClick={() => playSong(song)}
-                aria-label={isCurrent && isPlaying ? "Pause" : "Play"}
-                title="Play a 30-second preview"
-              >
-                {isLoading ? "…" : isCurrent && isPlaying ? "❚❚" : "▶"}
-              </button>
+              <div className="song-cover">
+                <Cover
+                  src={song.artworkUrl}
+                  label={song.title}
+                  seed={song.artist}
+                  className="song-art"
+                />
+                <button
+                  className={`play-btn${isCurrent ? " active" : ""}`}
+                  onClick={() => playSong(song)}
+                  aria-label={isCurrent && isPlaying ? "Pause" : "Play"}
+                  title="Play a 30-second preview"
+                >
+                  {isLoading ? "…" : isCurrent && isPlaying ? "❚❚" : "▶"}
+                </button>
+              </div>
               <span className="song-title">{song.title}</span>
               <span className="song-artist muted">{song.artist}</span>
               <span className="song-dur muted">{formatDuration(song.duration)}</span>
@@ -246,6 +304,14 @@ export default function PlaylistDetail() {
           );
         })}
       </div>
+
+      {importing && (
+        <ImportSongsModal
+          existingSongs={playlist.Songs}
+          onImport={handleImport}
+          onClose={() => setImporting(false)}
+        />
+      )}
     </>
   );
 }

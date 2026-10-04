@@ -5,6 +5,7 @@ const sequelize = require("./db");
 const playlistRoutes = require("./routes/playlists");
 const songRoutes = require("./routes/songs");
 const previewRoutes = require("./routes/preview");
+const { enqueueMissing } = require("./lib/artwork");
 
 const app = express();
 
@@ -85,12 +86,16 @@ async function startApp() {
     await sequelize.authenticate();
     console.log("Database connection established.");
 
-    await sequelize.sync();
+    // alter adds the new artworkUrl column to an existing Songs table
+    await sequelize.sync({ alter: true });
     console.log("Database tables synchronized.");
 
     app.listen(PORT, () => {
       console.log(`Playlist API running on port ${PORT}`);
     });
+
+    // fill in cover art for songs that don't have it yet, in the background
+    enqueueMissing().catch((err) => console.warn("Artwork backfill failed:", err.message));
   } catch (err) {
     console.error("Unable to start server:", err);
     process.exit(1);

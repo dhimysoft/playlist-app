@@ -18,6 +18,12 @@ const Song = sequelize.define("Song", {
     allowNull: false,
     validate: { min: 1 },
   },
+  // cover image url. null = not looked up yet, "" = looked up but none found
+  artworkUrl: {
+    type: DataTypes.STRING(1024),
+    allowNull: true,
+    defaultValue: null,
+  },
 });
 
 module.exports = Song;

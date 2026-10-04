@@ -1,5 +1,6 @@
 const express = require("express");
 const { Song } = require("../models");
+const { enqueue } = require("../lib/artwork");
 
 const router = express.Router();
 
@@ -47,7 +48,14 @@ router.patch("/:id", async (req, res, next) => {
       updates.duration = seconds;
     }
 
+    // a different title/artist means a different cover
+    const changed =
+      (updates.title && updates.title !== song.title) ||
+      (updates.artist && updates.artist !== song.artist);
+    if (changed) updates.artworkUrl = null;
+
     await song.update(updates);
+    if (changed) enqueue(song.id, { first: true });
 
     res.status(200).json(song);
   } catch (err) {

@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const { Playlist, Song } = require("../models");
+const { sequelize, Playlist, Song } = require("../models");
+const { enqueue } = require("../lib/artwork");
 
 // check the playlist has a name before creating
 function requirePlaylistName(req, res, next) {
@@ -235,6 +236,9 @@ router.post(
         PlaylistId: playlist.id,
       });
 
+      // look up its cover in the background
+      enqueue(song.id, { first: true });
+
       res.status(201).json(song);
     } catch (err) {
       if (err.name === "SequelizeValidationError") {
@@ -247,6 +251,87 @@ router.post(
     }
   }
 );
+
+// add many songs at once: body is { songs: [{ title, artist, duration }, ...] }
+// all or nothing, so one bad row doesn't leave a half imported list
+const MAX_BULK_SONGS = 500;
+
+router.post("/:id/songs/bulk", async (req, res, next) => {
+  try {
+    const playlist = await Playlist.findByPk(req.params.id);
+
+    if (!playlist) {
+      return res.status(404).json({
+        error: "Playlist not found",
+      });
+    }
+
+    const { songs } = req.body;
+
+    if (!Array.isArray(songs) || songs.length === 0) {
+      return res.status(400).json({
+        error: "songs must be a non-empty array",
+      });
+    }
+
+    if (songs.length > MAX_BULK_SONGS) {
+      return res.status(400).json({
+        error: `You can add at most ${MAX_BULK_SONGS} songs at once`,
+      });
+    }
+
+    // check every row first and report which ones are wrong (row numbers start at 1)
+    const rows = [];
+    const problems = [];
+
+    songs.forEach((item, index) => {
+      const title = typeof item?.title === "string" ? item.title.trim() : "";
+      const artist = typeof item?.artist === "string" ? item.artist.trim() : "";
+      const seconds = Number(item?.duration);
+
+      if (!title) {
+        problems.push(`Song ${index + 1}: title is required`);
+      } else if (!artist) {
+        problems.push(`Song ${index + 1}: artist is required`);
+      } else if (!Number.isInteger(seconds) || seconds < 1) {
+        problems.push(`Song ${index + 1}: duration must be a positive number of seconds`);
+      } else {
+        rows.push({ title, artist, duration: seconds, PlaylistId: playlist.id });
+      }
+    });
+
+    if (problems.length > 0) {
+      return res.status(400).json({
+        error: problems.slice(0, 5).join("; "),
+        problems,
+      });
+    }
+
+    // one transaction, created one by one so they keep their order (createdAt)
+    const created = await sequelize.transaction(async (transaction) => {
+      const made = [];
+
+      for (const row of rows) {
+        made.push(await Song.create(row, { transaction }));
+      }
+
+      return made;
+    });
+
+    // look up their covers in the background
+    created.forEach((song) => enqueue(song.id));
+
+    res.status(201).json(created);
+  } catch (err) {
+    if (err.name === "SequelizeValidationError") {
+      return res.status(400).json({
+        error: err.errors[0].message,
+      });
+    }
+
+    next(err);
+  }
+});
 
 // update a song
 router.patch("/:id/songs/:songId", async (req, res, next) => {
@@ -298,7 +383,14 @@ router.patch("/:id/songs/:songId", async (req, res, next) => {
       updates.duration = seconds;
     }
 
+    // a different title/artist means a different cover
+    const changed =
+      (updates.title && updates.title !== song.title) ||
+      (updates.artist && updates.artist !== song.artist);
+    if (changed) updates.artworkUrl = null;
+
     await song.update(updates);
+    if (changed) enqueue(song.id, { first: true });
 
     res.json(song);
   } catch (err) {

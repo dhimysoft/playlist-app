@@ -37,6 +37,9 @@ router.get("/", async (req, res, next) => {
     res.status(200).json({
       previewUrl: hit.previewUrl,
       artworkUrl: hit.artworkUrl100 || null,
+      durationSeconds: hit.trackTimeMillis
+        ? Math.round(hit.trackTimeMillis / 1000)
+        : null,
       trackName: hit.trackName,
       artistName: hit.artistName,
     });

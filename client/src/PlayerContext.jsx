@@ -15,6 +15,7 @@ export const usePlayer = () => useContext(PlayerContext);
 
 export function PlayerProvider({ children }) {
   const audioRef = useRef(null); // audio element, ref so changing it doesn't re-render
+  const requestRef = useRef(0); // which play click is the latest, so an older slow one gets dropped
 
   const [current, setCurrent] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -45,36 +46,44 @@ export function PlayerProvider({ children }) {
       togglePlay();
       return;
     }
+    const request = ++requestRef.current;
     try {
       setError(null);
       setLoadingId(song.id);
       const info = await getPreview(song.artist, song.title);
+      if (request !== requestRef.current) return; // clicked something else meanwhile
       audioRef.current.src = info.previewUrl;
       await audioRef.current.play();
+      if (request !== requestRef.current) return;
       setCurrent({
         id: song.id,
         title: song.title,
         artist: song.artist,
-        artworkUrl: info.artworkUrl,
+        // prefer the cover saved for the song, the preview's one is the fallback
+        artworkUrl: song.artworkUrl || info.artworkUrl,
       });
-    } catch (err) {
+    } catch {
+      if (request !== requestRef.current) return;
       // no preview for this one
+      audioRef.current.pause();
       setError(`No preview available for “${song.title}”`);
       setCurrent(null);
       setIsPlaying(false);
     } finally {
-      setLoadingId(null);
+      if (request === requestRef.current) setLoadingId(null);
     }
   }
 
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio || !audio.src) return;
-    if (audio.paused) audio.play();
+    if (audio.paused) audio.play().catch(() => {});
     else audio.pause();
   }
 
   function stop() {
+    requestRef.current++; // cancel a preview that is still loading
+    setLoadingId(null);
     const audio = audioRef.current;
     if (audio) {
       audio.pause();
