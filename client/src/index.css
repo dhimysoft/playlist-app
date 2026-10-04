@@ -386,8 +386,8 @@ input:focus {
   transform: translateX(-50%);
   width: min(560px, calc(100% - 40px));
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  gap: 8px;
   padding: 12px 16px;
   background: #17181f;
   border: 1px solid var(--border);
@@ -868,4 +868,257 @@ input:focus {
   padding-left: 0;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* --- now playing: controls row + progress bar --- */
+.np-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.np-skip {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 1.05rem;
+  cursor: pointer;
+  padding: 4px 2px;
+  flex: none;
+}
+
+.np-skip:hover:not(:disabled) {
+  color: var(--green);
+}
+
+.np-skip:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.np-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.np-time {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+}
+
+.np-progress input[type="range"] {
+  flex: 1;
+  padding: 0;
+  border: none;
+  background: none;
+  height: 16px;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+/* --- song row: actions, inline editing, search/sort --- */
+.song-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.song-playlist {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-decoration: none;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.song-playlist:hover {
+  color: var(--green);
+}
+
+.song-row.editing input {
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.song-dur-input {
+  width: 84px;
+}
+
+.song-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.songs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.songs-head .section-label {
+  margin: 0;
+}
+
+.songs-tools {
+  display: flex;
+  gap: 10px;
+}
+
+.songs-tools input {
+  width: 200px;
+  padding: 8px 12px;
+}
+
+select {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.song-list {
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .songs-tools {
+    width: 100%;
+  }
+
+  .songs-tools input {
+    flex: 1;
+    width: auto;
+  }
+
+  .song-actions {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .song-row.editing {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .song-row.editing .song-cover {
+    grid-row: 1 / span 3;
+  }
+
+  .song-row.editing .song-actions,
+  .song-row.editing .song-dur-input {
+    grid-column: 2;
+    grid-row: auto;
+  }
+}
+
+/* --- top navigation, library, 404 --- */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.topnav {
+  display: flex;
+  gap: 6px;
+  margin-left: 20px;
+}
+
+.topnav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 6px 14px;
+  border-radius: 999px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.topnav a:hover {
+  color: var(--text);
+}
+
+.topnav a.active {
+  color: var(--text);
+  background: var(--card-hover);
+}
+
+.library-stats {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+}
+
+.library-tools {
+  margin-bottom: 14px;
+}
+
+.library-tools input {
+  flex: 1;
+  width: auto;
+}
+
+.not-found {
+  text-align: center;
+  padding: 60px 0;
+}
+
+.not-found p {
+  margin: 10px 0 24px;
+}
+
+.not-found .pill {
+  display: inline-block;
+  text-decoration: none;
+}
+
+/* small screens: title/length on top, artist under it, buttons on their own line */
+@media (max-width: 640px) {
+  .song-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    row-gap: 2px;
+  }
+
+  .song-row .song-cover {
+    grid-row: 1 / span 3;
+    align-self: center;
+  }
+
+  .song-row .song-title {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .song-row .song-dur {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .song-row .song-artist {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+
+  .song-row .song-actions {
+    grid-column: 2 / -1;
+    grid-row: 3;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+
+  .songs-tools select {
+    min-width: 0;
+    max-width: 48%;
+  }
 }

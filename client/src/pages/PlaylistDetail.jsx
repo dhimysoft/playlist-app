@@ -1,25 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   getPlaylist,
   addSong,
   addSongs,
   deleteSong,
+  updateSong,
   updatePlaylist,
   deletePlaylist,
-  formatDuration,
+  formatTotalDuration,
 } from "../api";
-import { usePlayer } from "../PlayerContext";
-import Cover from "../components/Cover";
 import ImportSongsModal from "../components/ImportSongsModal";
 import PlaylistCover from "../components/PlaylistCover";
+import SongRow from "../components/SongRow";
 import { useArtworkRefresh } from "../useArtworkRefresh";
 
 // one playlist: its songs, add song form, edit/delete, play buttons
 export default function PlaylistDetail() {
   const { id } = useParams(); // playlist id from the url
   const navigate = useNavigate();
-  const { playSong, current, isPlaying, loadingId } = usePlayer();
 
   const [playlist, setPlaylist] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +31,10 @@ export default function PlaylistDetail() {
   const [submitting, setSubmitting] = useState(false);
 
   const [importing, setImporting] = useState(false);
+  const [actionError, setActionError] = useState(null); // delete/save playlist problems
+
+  const [query, setQuery] = useState(""); // search box
+  const [sort, setSort] = useState("added");
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -75,6 +78,26 @@ export default function PlaylistDetail() {
     }
   });
 
+  // what's shown: filtered by the search box, then sorted. This is also the play queue.
+  const visibleSongs = useMemo(() => {
+    const songs = playlist?.Songs ?? [];
+    const q = query.trim().toLowerCase();
+    const filtered = q
+      ? songs.filter(
+          (s) =>
+            s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
+        )
+      : songs;
+
+    const compare = {
+      title: (a, b) => a.title.localeCompare(b.title),
+      artist: (a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title),
+      duration: (a, b) => a.duration - b.duration,
+    }[sort];
+
+    return compare ? [...filtered].sort(compare) : filtered;
+  }, [playlist, query, sort]);
+
   // "3:45" or plain seconds -> seconds, or null if it's bad
   function parseDuration(input) {
     const trimmed = input.trim();
@@ -110,16 +133,22 @@ export default function PlaylistDetail() {
     }
   }
 
-  async function handleDeleteSong(songId) {
-    try {
-      await deleteSong(songId);
-      setPlaylist((prev) => ({
-        ...prev,
-        Songs: prev.Songs.filter((s) => s.id !== songId),
-      }));
-    } catch (err) {
-      alert(err.message);
-    }
+  // the row shows the error if these throw
+  async function handleDeleteSong(song) {
+    await deleteSong(song.id);
+    setPlaylist((prev) => ({
+      ...prev,
+      Songs: prev.Songs.filter((s) => s.id !== song.id),
+    }));
+  }
+
+  async function handleSaveSong(song, changes) {
+    const updated = await updateSong(song.id, changes);
+    // the server clears the cover when the title/artist changed, so it gets looked up again
+    setPlaylist((prev) => ({
+      ...prev,
+      Songs: prev.Songs.map((s) => (s.id === song.id ? { ...s, ...updated } : s)),
+    }));
   }
 
   // add a whole list at once (from the import popup)
@@ -129,6 +158,7 @@ export default function PlaylistDetail() {
   }
 
   function startEdit() {
+    setActionError(null);
     setEditName(playlist.name);
     setEditDesc(playlist.description || "");
     setEditing(true);
@@ -137,6 +167,7 @@ export default function PlaylistDetail() {
   async function handleSaveEdit(e) {
     e.preventDefault();
     try {
+      setActionError(null);
       const updated = await updatePlaylist(id, {
         name: editName,
         description: editDesc,
@@ -144,17 +175,18 @@ export default function PlaylistDetail() {
       setPlaylist((prev) => ({ ...prev, ...updated }));
       setEditing(false);
     } catch (err) {
-      alert(err.message);
+      setActionError(err.message);
     }
   }
 
   async function handleDeletePlaylist() {
     if (!confirm("Delete this playlist and all its songs?")) return;
     try {
+      setActionError(null);
       await deletePlaylist(id);
       navigate("/");
     } catch (err) {
-      alert(err.message);
+      setActionError(err.message);
     }
   }
 
@@ -224,11 +256,13 @@ export default function PlaylistDetail() {
             <p className="muted">{playlist.description || "No description"}</p>
             <p className="muted detail-stats">
               {playlist.Songs.length} song{playlist.Songs.length === 1 ? "" : "s"}
-              {playlist.Songs.length > 0 && ` · ${formatDuration(totalSeconds)}`}
+              {playlist.Songs.length > 0 && ` · ${formatTotalDuration(totalSeconds)}`}
             </p>
           </div>
         </div>
       )}
+
+      {actionError && <p className="error">{actionError}</p>}
 
       <div className="add-head">
         <h3 className="section-label">Add a Song</h3>
@@ -259,50 +293,52 @@ export default function PlaylistDetail() {
       </form>
       {formError && <p className="error">{formError}</p>}
 
-      <h3 className="section-label">
-        Songs
-        {playlist.Songs.length > 0 && (
-          <span className="muted total"> · {formatDuration(totalSeconds)}</span>
+      <div className="songs-head">
+        <h3 className="section-label">
+          Songs
+          {playlist.Songs.length > 0 && (
+            <span className="muted total"> · {formatTotalDuration(totalSeconds)}</span>
+          )}
+        </h3>
+        {playlist.Songs.length > 1 && (
+          <div className="songs-tools">
+            <input
+              type="search"
+              placeholder="Search songs"
+              aria-label="Search songs"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              aria-label="Sort songs"
+            >
+              <option value="added">In order added</option>
+              <option value="title">Title A–Z</option>
+              <option value="artist">Artist A–Z</option>
+              <option value="duration">Shortest first</option>
+            </select>
+          </div>
         )}
-      </h3>
+      </div>
 
       <div className="song-list">
         {playlist.Songs.length === 0 && (
-          <p className="muted">No songs yet. Add one above.</p>
+          <p className="muted">No songs yet. Add one above, or import a list.</p>
         )}
-        {playlist.Songs.map((song) => {
-          const isCurrent = current?.id === song.id;
-          const isLoading = loadingId === song.id;
-          return (
-            <div key={song.id} className={`song-row${isCurrent ? " playing" : ""}`}>
-              <div className="song-cover">
-                <Cover
-                  src={song.artworkUrl}
-                  label={song.title}
-                  seed={song.artist}
-                  className="song-art"
-                />
-                <button
-                  className={`play-btn${isCurrent ? " active" : ""}`}
-                  onClick={() => playSong(song)}
-                  aria-label={isCurrent && isPlaying ? "Pause" : "Play"}
-                  title="Play a 30-second preview"
-                >
-                  {isLoading ? "…" : isCurrent && isPlaying ? "❚❚" : "▶"}
-                </button>
-              </div>
-              <span className="song-title">{song.title}</span>
-              <span className="song-artist muted">{song.artist}</span>
-              <span className="song-dur muted">{formatDuration(song.duration)}</span>
-              <button
-                className="pill ghost sm"
-                onClick={() => handleDeleteSong(song.id)}
-              >
-                Delete
-              </button>
-            </div>
-          );
-        })}
+        {playlist.Songs.length > 0 && visibleSongs.length === 0 && (
+          <p className="muted">No songs match “{query}”.</p>
+        )}
+        {visibleSongs.map((song) => (
+          <SongRow
+            key={song.id}
+            song={song}
+            queue={visibleSongs}
+            onSave={handleSaveSong}
+            onDelete={handleDeleteSong}
+          />
+        ))}
       </div>
 
       {importing && (

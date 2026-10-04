@@ -7,15 +7,22 @@ Built with **PostgreSQL · Express · React (Vite) · Node · Sequelize**.
 
 ---
 
-## 📚 Documentation in this project (read this first)
+## ✨ Features
 
-There are three docs, each with a different job:
+- Playlists: create, rename, delete, with a cover collage built from the songs' album art
+- Songs: add one at a time, **import a whole list** from Excel/CSV/pasted text, edit, delete
+- **Library** page: every song across all playlists, searchable and sortable
+- Search and sort inside a playlist
+- 30-second previews with a now-playing bar: play/pause, next/previous, seek, and
+  auto-advance to the next song
+
+## 📚 Documentation in this project
 
 | File | What it's for |
 |------|---------------|
 | **README.md** (this file) | How to run the app + a quick reference. Start here. |
-| **PROJECT_GUIDE.md** | A plain-English study/presentation guide — explains every folder and how the app works, with a Q&A section for class. |
-| **PROJECT_SOURCES.docx** | Maps every file to the official documentation it was built from (Sequelize, Express, React, etc.). |
+| **deployment.md** | Step-by-step guide to deploying (Neon database, Render API, Vercel frontend). |
+| **PROJECT_SOURCES.md** | Maps every file to the official documentation it was built from. |
 
 ---
 
@@ -35,15 +42,7 @@ songs, so a song is never left orphaned. Duration is stored as a **number of sec
 ## Prerequisites
 
 - **Node.js**
-- **PostgreSQL** running locally with a database named `playlist_db`.
-  This project connects on **port 5431** (the Postgres.app "PostgreSQL 18" server):
-
-  ```bash
-  createdb -p 5431 playlist_db
-  ```
-
-  > Using the default Postgres on port 5432 instead? Change the port in
-  > `server/db.js`, or set `DATABASE_URL` (see below).
+- **PostgreSQL** running locally with a database, e.g. `createdb playlist_db`
 
 ---
 
@@ -54,11 +53,13 @@ songs, so a song is never left orphaned. Duration is stored as a **number of sec
 ```bash
 cd server
 npm install
-npm run seed   # creates tables + sample data (drops existing data!)
-npm run dev    # nodemon, or: npm start
+cp .env.example .env   # then set DATABASE_URL to your database
+npm run seed           # optional: creates tables + sample data (drops existing data!)
+npm run dev            # nodemon, or: npm start
 ```
 
-You should see: `Database connection established` and `Server running on http://localhost:3000`.
+You should see: `Database connection established` and `Playlist API running on port 3000`.
+The server needs `DATABASE_URL` and stops with a clear error if it's missing. `PORT` is optional.
 
 **2. React client** — open the local URL printed by Vite (usually http://localhost:5173)
 
@@ -68,11 +69,9 @@ npm install
 npm run dev
 ```
 
-Start the **API first**, then the client. The Vite dev server proxies `/api` →
-`http://localhost:3000` (see `client/vite.config.js`), and the server also enables
-`cors`, so either wiring works.
-
-> Override the database with `DATABASE_URL`, or the API port with `PORT`.
+Start the **API first**, then the client. The client calls `http://localhost:3000` by default;
+set `VITE_API_URL` to point it at a deployed API. Allowed browser origins are listed in
+`server/app.js` (add yours with the `FRONTEND_URL` variable).
 
 ---
 
@@ -104,7 +103,7 @@ Status codes: `200` read/updated · `201` created · `204` deleted · `400` bad 
 
 ```
 server/
-  db.js            one Sequelize connection (port 5431)
+  db.js            one Sequelize connection (from DATABASE_URL)
   models/          Playlist.js, Song.js, index.js (the association)
   routes/          playlists.js, songs.js, preview.js
   lib/artwork.js   looks up cover art (iTunes) in a slow background queue
@@ -112,14 +111,15 @@ server/
   seed.js          npm run seed — sample playlists & songs
 client/
   vite.config.js   dev server + /api proxy
+  vercel.json      sends every url to index.html so refreshing /library works on Vercel
   src/
-    main.jsx           router (/, /playlists/:id)
+    main.jsx           router (/, /playlists/:id, /library, 404)
     api.js             all fetch logic + formatDuration()
     PlayerContext.jsx  the global music player
-    components/        Layout.jsx, NowPlayingBar.jsx, Cover.jsx, PlaylistCover.jsx,
-                       ImportSongsModal.jsx
+    components/        Layout.jsx, NowPlayingBar.jsx, SongRow.jsx, Cover.jsx,
+                       PlaylistCover.jsx, ImportSongsModal.jsx
     importParser.js    turns spreadsheet rows / pasted text into songs
-    pages/             PlaylistList.jsx, PlaylistDetail.jsx
+    pages/             PlaylistList.jsx, PlaylistDetail.jsx, Library.jsx, NotFound.jsx
     index.css          dark Spotify-ish theme
 ```
 

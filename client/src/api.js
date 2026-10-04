@@ -116,3 +116,24 @@ export function addSongs(playlistId, songs) {
     body: JSON.stringify({ songs }),
   });
 }
+
+// change a song's title, artist or duration (only send the fields that changed)
+export function updateSong(songId, data) {
+  return request(`${BASE_URL}/songs/${songId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+}
+
+// total time of a list: 2970 -> "49 min", 5400 -> "1 hr 30 min"
+export function formatTotalDuration(seconds) {
+  const totalMinutes = Math.round(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) return `${totalMinutes} min`;
+  return minutes === 0 ? `${hours} hr` : `${hours} hr ${minutes} min`;
+}

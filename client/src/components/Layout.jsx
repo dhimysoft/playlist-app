@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { PlayerProvider } from "../PlayerContext";
 import NowPlayingBar from "./NowPlayingBar";
 
@@ -9,8 +9,16 @@ export default function Layout() {
       <div className="app">
         <div className="container">
           <header className="topbar">
-            <span className="logo-dot" />
-            <span className="logo-text">Playlist</span>
+            <NavLink to="/" className="logo">
+              <span className="logo-dot" />
+              <span className="logo-text">Playlist</span>
+            </NavLink>
+            <nav className="topnav">
+              <NavLink to="/" end>
+                Playlists
+              </NavLink>
+              <NavLink to="/library">Library</NavLink>
+            </nav>
           </header>
           <main className="content">
             <Outlet />
