@@ -304,6 +304,7 @@ export function PlayerProvider({ children }) {
         artist: song.artist,
         // prefer the cover saved for the song, the preview's one is the fallback
         artworkUrl: song.artworkUrl || info.artworkUrl,
+        youtubeId: song.youtubeId || null,
         source: "preview",
       });
     } catch {

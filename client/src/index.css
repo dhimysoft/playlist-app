@@ -1288,3 +1288,24 @@ select {
     flex: 1;
   }
 }
+
+/* links to the full song, shown while only the 30-second preview plays */
+.np-listen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.np-listen a {
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.np-listen a:hover {
+  text-decoration: underline;
+}

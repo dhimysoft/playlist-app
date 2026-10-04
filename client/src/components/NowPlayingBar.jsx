@@ -1,5 +1,6 @@
 import { usePlayer } from "../PlayerContext";
 import { formatDuration } from "../api";
+import { fullSongLinks } from "../songLinks";
 
 // the bar at the bottom showing what's playing
 export default function NowPlayingBar() {
@@ -82,6 +83,21 @@ export default function NowPlayingBar() {
             </span>
           </div>
           {notice && <p className="np-notice">{notice}</p>}
+          {current.source === "preview" && (
+            <p className="np-listen">
+              Hear the full song:
+              {fullSongLinks(current).map((link) => (
+                <a
+                  key={link.name}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {link.name} ↗
+                </a>
+              ))}
+            </p>
+          )}
         </>
       ) : (
         <span className="np-error">{error}</span>

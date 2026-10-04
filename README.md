@@ -190,6 +190,10 @@ player (a small video panel appears above the player bar). Music licensing makes
 free way to stream whole tracks. If a song has no video, or the video can't be embedded, the
 app tells you why and plays the 30-second preview instead.
 
+Whenever only the preview is playing, the player bar also shows **Hear the full song** links
+(YouTube, Spotify, Apple Music). They are plain searches (or the saved YouTube video), so they
+need no keys.
+
 There are two ways a song gets its video:
 
 1. **Paste a link (no setup).** Click **Edit** on a song and paste any YouTube link
